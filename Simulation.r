@@ -1,12 +1,12 @@
 #  Note, you will need R 3.3.1 with rjags package, and you will also need to install a program called rjags4 outside of R: http://www.sourceforge.net/projects/mcmc-jags/files
 
-N=15000
+N=150
 DurationOfTrialMonths = 50
 Allocation = c(.25,.25,.25,.25)
-ARMMeans=c(12,9,6,3)
+ARMMeans=c(21,9,6,3)
 ARMStandardDeviations=c(12,15,10,8)
 Simulations = 1
-set.seed(9)
+set.seed(1)
 
 MRSDistribution=matrix(,4,7)
 MRSDistribution[1,] = c(.1,.1,.1,.1,.1,.1,.4)
@@ -38,7 +38,7 @@ Allocate = function(ARMMeans, ARMStandardDeviations, Allocation, MRSDistribution
 
 }
 
-Fit = function(Subject, column=3){
+Fit = function(Patients,Subject, column=3){
 	### Make dummy variables
 	dose0 <- as.numeric(Patients[1:Subject,2]==1)
 	dose1 <- as.numeric(Patients[1:Subject,2]==2)
@@ -46,7 +46,7 @@ Fit = function(Subject, column=3){
 	dose3 <- as.numeric(Patients[1:Subject,2]==4)
 	#cbind(Patients[1:Subject,2], dose0, dose1, dose2, dose3)
 
-	df <- list(N=40, x=Patients[1:Subject,column], dose0=dose0, dose1=dose1, dose2=dose2, dose3=dose3)
+	df <- list(N=Subject, x=Patients[1:Subject,column], dose0=dose0, dose1=dose1, dose2=dose2, dose3=dose3)
 
 	model1ForJAGS <- "model1.txt"
 	cat("
@@ -55,7 +55,7 @@ Fit = function(Subject, column=3){
 	        x[i] ~ dnorm(mu[i],prec.x)  
 	        mu[i] <- beta[1]*dose0[i] + beta[2]*dose1[i] + beta[3]*dose2[i] + beta[4]*dose3[i]
 	    }
-	    beta[1] ~ dnorm(10, prec.b)#prior for control
+	    beta[1] ~ dnorm(20, prec.b)#prior for control
 	    beta[2] ~ dnorm(beta[1], prec.b)
 	    beta[3] ~ dnorm(beta[2], prec.b)
 	    beta[4] ~ dnorm(beta[3], prec.b)
@@ -92,7 +92,7 @@ Results = array(,c(Simulations,22,4))
 for (Trial in 1:Simulations)
 {
 	#Initialize Patient matrix
-	Patients = matrix(,N,10)
+	Patients = matrix(,N,4)
 
 	#Column 1 is the time from the start of the trial to the enrollment of the patient
 	Patients[,1] = sort(runif(n=N, min = 0, max = DurationOfTrialMonths))
@@ -104,10 +104,10 @@ for (Trial in 1:Simulations)
 		if (Subject %in% c(40, 60,80, N)) {
 			LookIndex = LookIndex + 1
 			print(LookIndex)
-			PenumbraModel=Fit(Subject, column = 3)
+			PenumbraModel=Fit(Patients = Patients, Subject=Subject, column = 3)
 			Allocation = PenumbraModel$Allocation
 			#Futile = (max(PenumbraModel$BetterThan1) < Cutoff)
-			MRSModel=Fit(Subject,column = 4)
+			MRSModel=Fit(Patients = Patients, Subject=Subject,column = 4)
 
 			#store results
 				#	Number allocated to 1
@@ -146,6 +146,33 @@ for (Trial in 1:Simulations)
 							/sqrt(1/n0+1/n1+1/m0+1/m1)
 					)
 				
+			# plot
+			if (Trial == 1)
+			{
+				best <- c(NA, PenumbraModel$Probabilities)
+
+				pdf(file = "c:/users/rreeder/desktop/TrialPlot.pdf")
+
+				par(mar = c(4,4,4,4))
+				x.spot <- barplot(Subject*Results[Trial,1:4,LookIndex], ylim = c(0,70), xlim = c(0, 4.75), names = c("Cntrl", "Dose1", "Dose2", "Dose3"))
+				mtext(side = 2, "Sample Size", line = 2.5)	
+
+				par(new = TRUE)
+				plot(x.spot,  tapply(Patients[,3], Patients[,2], mean), xlim = c(0, 4.75), ylim = c(0, 30), pch = 8, col = "red", 
+						bty = "n", xlab = "", ylab = "", xaxt = "n", yaxt = "n", cex = 1.5)
+				title(main = paste0("Interim Analysis: ", Subject, " Patients"))		
+				axis(side = 4)	
+				mtext(side = 4, "Mean Change in Core", line = 2)	
+				lines(x.spot, apply(PenumbraModel$Samples, 2, mean)[1:4], type = "b", lwd = 2)
+				lines(x.spot, apply(PenumbraModel$Samples, 2, quantile, 0.025)[1:4], type = "b", lwd = 1, lty = 2)
+				lines(x.spot, apply(PenumbraModel$Samples, 2, quantile, 0.975)[1:4], type = "b", lwd = 1, lty = 2)
+				text(x = x.spot, y = rep(-5,4), best, xpd = TRUE)
+				text(x = x.spot[1], y = -5, "Pr(Best)", xpd = TRUE)
+				legend("topleft", legend = c(paste0("Pr(Best > Cntrl) = ", p),paste0("Pr(Phase III Success) = ",round(Results[Trial, 22,LookIndex],3))), bty = "n")
+
+				dev.off()
+			}
+
 		}
 	}
 	
