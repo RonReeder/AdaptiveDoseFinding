@@ -97,12 +97,12 @@
 			jags1 <- jags.model("model1.txt",data=df,n.chains=1,n.adapt=1000, inits=inits.1)
 			update(jags1, n.iter=10000)
 			mcmc.samples <- coda.samples(jags1,c('beta','tau.b', 'tau.x'),10000)
-		  	
+		  	Samples = mcmc.samples[[1]][,1:4]
 			Probabilities = apply(Samples[,2:4] == apply(Samples[,2:4], 1, min),2,mean)
 
 			return(
 				list(
-					Samples = mcmc.samples[[1]][,1:4]
+					Samples = Samples
 					, Probabilities = Probabilities
 					, Allocation = c(.25,0.75*Probabilities[1]/sum(Probabilities[1:3]), 0.75*Probabilities[2]/sum(Probabilities[1:3]), 0.75*Probabilities[3]/sum(Probabilities[1:3]))
 					, BetterThan1 = apply(Samples < Samples[,1],2,mean)
