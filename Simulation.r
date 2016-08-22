@@ -10,19 +10,19 @@
 	#Initial allocation (ranomization probabilities)	
 		Allocation = c(.25,.25,.25,.25)
 
+	#Number of simulations to run
+		Simulations = 2
+
 	#Distribution of penumbra outcomes in each arm
 		ARMMeans=c(21,9,6,3)
 		ARMStandardDeviations=c(12,15,10,8)
 
-	#Number of simulations to run
-		Simulations = 2
-
 	#Distribution of MRS for each dosing group.
 		MRSDistribution=matrix(,4,7)
-		MRSDistribution[1,] = c(.1,.1,.1,.1,.1,.1,.4)
-		MRSDistribution[2,] = c(.1,.1,.1,.1,.1,.4,.1)
-		MRSDistribution[3,] = c(.1,.1,.1,.4,.1,.1,.1)
-		MRSDistribution[4,] = c(.4,.1,.1,.1,.1,.1,.1)
+		MRSDistribution[1,] = c(.4,.1,.1,.1,.1,.1,.1) #Placebo
+		MRSDistribution[2,] = c(.1,.1,.4,.1,.1,.1,.1) #Dose 1
+		MRSDistribution[3,] = c(.1,.1,.1,.4,.1,.1,.1) #Dose 2
+		MRSDistribution[4,] = c(.1,.1,.1,.1,.4,.1,.1) #Dose 3
 
 	#Number of contols / actives in future phase three
 		m0=250 #controls
@@ -64,7 +64,7 @@
 	#Probabilities is a vector of probabilities that each dose is the best.  This vector does not include placebeo, so it has only 3 elements.
 	#BetterThan1 is a vector of length 4 (includes placebo) indicating the probability that each dose is better than placebo.  Note that this probability is zero for placebo.
 	#BestDose is an integer representing which dose is estimated to be the best.  1 = placebo, etc.
-		Fit = function(Patients,Subject, column=3){
+		Fit = function(Patients,Subject, column=3, good = 'max'){
 			### Make dummy variables
 			dose0 <- as.numeric(Patients[1:Subject,2]==1)
 			dose1 <- as.numeric(Patients[1:Subject,2]==2)
@@ -98,7 +98,8 @@
 			update(jags1, n.iter=10000)
 			mcmc.samples <- coda.samples(jags1,c('beta','tau.b', 'tau.x'),10000)
 		  	Samples = mcmc.samples[[1]][,1:4]
-			Probabilities = apply(Samples[,2:4] == apply(Samples[,2:4], 1, min),2,mean)
+		  	if (good == 'max'){Probabilities = apply(Samples[,2:4] == apply(Samples[,2:4], 1, max),2,mean)}
+		  	if (good == 'min'){Probabilities = apply(Samples[,2:4] == apply(Samples[,2:4], 1, min),2,mean)}
 
 			return(
 				list(
@@ -139,19 +140,19 @@
 						if (Subject %in% InterimLooks) {
 							LookIndex = LookIndex + 1
 							print(LookIndex)
-							PenumbraModel=Fit(Patients = Patients, Subject=Subject, column = 3)
+							PenumbraModel=Fit(Patients = Patients, Subject=Subject, column = 3, good = 'min')
 							Allocation = PenumbraModel$Allocation
 							#Futile = (max(PenumbraModel$BetterThan1) < Cutoff)
-							MRSModel=Fit(Patients = Patients, Subject=Subject,column = 4)
+							MRSModel=Fit(Patients = Patients, Subject=Subject,column = 4, good = 'max')
 
 							#store results
-								#	Number allocated to 1
+								#	Proportion allocated to 1
 								Results[Trial,1,LookIndex] = mean(Patients[1:Subject,2]==1)			
-								#	Number allocated to 2
+								#	Proportion allocated to 2
 								Results[Trial, 2,LookIndex] = mean(Patients[1:Subject,2]==2)		
-								#	Number allocated to 3
+								#	Proportion allocated to 3
 								Results[Trial, 3,LookIndex] = mean(Patients[1:Subject,2]==3)		
-								#	Number allocated to 4
+								#	Proportion allocated to 4
 								Results[Trial, 4,LookIndex] = mean(Patients[1:Subject,2]==4)	
 					
 								#	Observed effect in dose 1 - 4
@@ -201,7 +202,7 @@
 								lines(x.spot, apply(PenumbraModel$Samples, 2, quantile, 0.975)[1:4], type = "b", lwd = 1, lty = 2)
 								text(x = x.spot, y = rep(-5,4), best, xpd = TRUE)
 								text(x = x.spot[1], y = -5, "Pr(Best)", xpd = TRUE)
-								legend("topleft", legend = c(paste0("Pr(Best > Cntrl) = ", p),paste0("Pr(Phase III Success) = ",round(Results[Trial, 22,LookIndex],3))), bty = "n")
+								legend("topleft", legend = c(paste0("Pr(Best > Cntrl on Weighted MRS) = ", p),paste0("Pr(Phase III Success on Weighted MRS) = ",round(Results[Trial, 22,LookIndex],3))), bty = "n")
 
 								
 							}
@@ -221,4 +222,3 @@ dev.off()
 
 	#Observed allocation of subject
 	Results[1,1:4,4]
-
