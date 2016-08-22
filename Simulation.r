@@ -15,7 +15,7 @@
 		ARMStandardDeviations=c(12,15,10,8)
 
 	#Number of simulations to run
-		Simulations = 1
+		Simulations = 2
 
 	#Distribution of MRS for each dosing group.
 		MRSDistribution=matrix(,4,7)
@@ -118,6 +118,7 @@
 		Results = array(,c(Simulations,22,4))
 
 	#Simulate trials
+		pdf(file = "C:/Users/rreeder/Desktop/AdaptiveDoseFinding/TrialPlot.pdf", onefile = T)
 		for (Trial in 1:Simulations)
 		{
 			#Initialize Patient matrix
@@ -154,7 +155,7 @@
 								Results[Trial, 4,LookIndex] = mean(Patients[1:Subject,2]==4)	
 					
 								#	Observed effect in dose 1 - 4
-								Results[Trial, 5:8,LookIndex] =  tapply(Patients[1:Subject,3], Patients[1:Subject,2], mean)
+								Results[Trial, 5:8,LookIndex] =  tapply(Patients[1:Subject,3], factor(Patients[1:Subject,2], levels=1:4), mean)
 
 								#	Fitted effect in dose 1 - 4
 								Results[Trial, 9:12,LookIndex] = apply(PenumbraModel$Samples, 2, mean)
@@ -181,22 +182,20 @@
 									)
 								
 							# plot
-							if (Trial == 1)
+							if (Trial %in% c(1,2,3,4))
 							{
 								best <- c(NA, PenumbraModel$Probabilities)
-
-								pdf(file = "c:/users/rreeder/desktop/TrialPlot.pdf")
 
 								par(mar = c(4,4,4,4))
 								x.spot <- barplot(Subject*Results[Trial,1:4,LookIndex], ylim = c(0,70), xlim = c(0, 4.75), names = c("Cntrl", "Dose1", "Dose2", "Dose3"))
 								mtext(side = 2, "Sample Size", line = 2.5)	
 
 								par(new = TRUE)
-								plot(x.spot,  tapply(Patients[,3], Patients[,2], mean), xlim = c(0, 4.75), ylim = c(0, 30), pch = 8, col = "red", 
+								plot(x.spot,  tapply(Patients[,3], factor(Patients[,2], levels = 1:4), mean), xlim = c(0, 4.75), ylim = c(0, 30), pch = 8, col = "red", 
 										bty = "n", xlab = "", ylab = "", xaxt = "n", yaxt = "n", cex = 1.5)
-								title(main = paste0("Interim Analysis: ", Subject, " Patients"))		
+								title(main = paste0("Simulated Trial: ", Trial, "; Number Enrolled: ", Subject))		
 								axis(side = 4)	
-								mtext(side = 4, "Mean Change in Core", line = 2)	
+								mtext(side = 4, "Mean Change in Penumbra Outcome", line = 2)	
 								lines(x.spot, apply(PenumbraModel$Samples, 2, mean)[1:4], type = "b", lwd = 2)
 								lines(x.spot, apply(PenumbraModel$Samples, 2, quantile, 0.025)[1:4], type = "b", lwd = 1, lty = 2)
 								lines(x.spot, apply(PenumbraModel$Samples, 2, quantile, 0.975)[1:4], type = "b", lwd = 1, lty = 2)
@@ -204,13 +203,14 @@
 								text(x = x.spot[1], y = -5, "Pr(Best)", xpd = TRUE)
 								legend("topleft", legend = c(paste0("Pr(Best > Cntrl) = ", p),paste0("Pr(Phase III Success) = ",round(Results[Trial, 22,LookIndex],3))), bty = "n")
 
-								dev.off()
+								
 							}
 
 						}
 				}
 		
 		}
+dev.off()
 
 #Print a few things to verify results are sensible.
 	#Observed
@@ -221,3 +221,4 @@
 
 	#Observed allocation of subject
 	Results[1,1:4,4]
+
