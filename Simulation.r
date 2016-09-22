@@ -11,11 +11,13 @@
 		Allocation = c(.25,.25,.25,.25)
 
 	#Number of simulations to run
-		Simulations = 2
+		Simulations = 1
 
 	#Distribution of penumbra outcomes in each arm
-		ARMMeans=c(21,9,6,3)
-		ARMStandardDeviations=c(12,15,10,8)
+		#ARMMeans=c(21,9,6,3)
+		ARMMeans=c(10,10,10,10)
+		#ARMStandardDeviations=c(12,15,10,8)
+		ARMStandardDeviations=c(1,1,1,1)
 
 	#Distribution of MRS for each dosing group.
 		MRSDistribution=matrix(,4,7)
@@ -23,10 +25,14 @@
 		MRSDistribution[2,] = c(.12,.16,.11,.15,.15,.12,.19) #Dose 1 
 		MRSDistribution[3,] = c(.15,.20,.10,.16,.15,.10,.14) #Dose 2
 		MRSDistribution[4,] = c(.17,.24,.15,.09,.20,.04,.11) #Dose 3
+		#MRSDistribution[1,] = c(0,1,0,0,0,0,0) #Placebo
+		#MRSDistribution[2,] = c(0,1,0,0,0,0,0) #Dose 1 
+		#MRSDistribution[3,] = c(0,1,0,0,0,0,0) #Dose 2
+		#MRSDistribution[4,] = c(0,1,0,0,0,0,0) #Dose 3
 
 	#Number of contols / actives in future phase three
-		m0=250 #controls
-		m1=250 #actives
+		m0=25000 #controls
+		m1=25000 #actives
 
 	#Utility function for utility-weighted MRS.
 		UtilityWeighting = c(1,.91,.76,.65,.33, 0, 0) 
@@ -64,7 +70,7 @@
 	#Probabilities is a vector of probabilities that each dose is the best.  This vector does not include placebeo, so it has only 3 elements.
 	#BetterThan1 is a vector of length 4 (includes placebo) indicating the probability that each dose is better than placebo.  Note that this probability is zero for placebo.
 	#BestDose is an integer representing which dose is estimated to be the best.  1 = placebo, etc.
-		Fit = function(Patients,Subject, column=3, good = 'max'){
+		Fit = function(Patients,Subject, column, good){
 			### Make dummy variables
 			dose0 <- as.numeric(Patients[1:Subject,2]==1)
 			dose1 <- as.numeric(Patients[1:Subject,2]==2)
@@ -100,13 +106,14 @@
 		  	Samples = mcmc.samples[[1]][,1:4]
 		  	if (good == 'max'){Probabilities = apply(Samples[,2:4] == apply(Samples[,2:4], 1, max),2,mean)}
 		  	if (good == 'min'){Probabilities = apply(Samples[,2:4] == apply(Samples[,2:4], 1, min),2,mean)}
-
+		  	if (good == 'max'){BetterThan1 = apply(Samples > Samples[,1],2,mean)}
+		  	if (good == 'min'){BetterThan1 = apply(Samples < Samples[,1],2,mean)}
 			return(
 				list(
 					Samples = Samples
 					, Probabilities = Probabilities
 					, Allocation = c(.25,0.75*Probabilities[1]/sum(Probabilities[1:3]), 0.75*Probabilities[2]/sum(Probabilities[1:3]), 0.75*Probabilities[3]/sum(Probabilities[1:3]))
-					, BetterThan1 = apply(Samples < Samples[,1],2,mean)
+					, BetterThan1 = BetterThan1
 					, BestDose = 1+which.max(Probabilities)
 				)
 			)
@@ -116,7 +123,7 @@
 	#first dimension is for trial
 	#second is for variable
 	#third is for look
-		Results = array(,c(Simulations,22,4))
+		Results = array(,c(Simulations,23,4))
 
 	#Simulate trials
 		pdf(file = "C:/Users/rreeder/Desktop/AdaptiveDoseFinding/TrialPlot.pdf", onefile = T)
@@ -170,15 +177,19 @@
 								#	Allocation going forward
 								Results[Trial, 17:20,LookIndex] = PenumbraModel$Allocation
 
-								#	Probability that best (best based on penumbra) is better than control (better is based on MRS)
-								p = MRSModel$BetterThan1[PenumbraModel$BestDose]
-								Results[Trial, 21,LookIndex] = p
+								#	Probability that best (best based on penumbra) is better than control (better is also based on penumbra)
+								ProbBestBetterThanControlPenumbra = PenumbraModel$BetterThan1[PenumbraModel$BestDose]
+								Results[Trial, 21,LookIndex] = ProbBestBetterThanControlPenumbra
+
+								#	Probability best (based on penumbra) is better than control (better is based on Weighted MRS)
+								ProbBestBetterThanControlMRS = MRSModel$BetterThan1[PenumbraModel$BestDose]
+								Results[Trial, 23,LookIndex] = ProbBestBetterThanControlMRS
 
 								#	Probability of success in a future phase 3 trial with utility weighted MRS outcome
 								n0 = sum(Patients[1:Subject,2]==1) #number of controls				
 								n1 = sum(Patients[1:Subject,2]==PenumbraModel$BestDose) #number in best dose (best by penumbra)
 								Results[Trial, 22,LookIndex] = pnorm(
-										(qnorm(p)*sqrt(1/n0+1/n1)-qnorm(.975)*sqrt(1/m0+1/m1))
+										(qnorm(ProbBestBetterThanControlMRS)*sqrt(1/n0+1/n1)-qnorm(.975)*sqrt(1/m0+1/m1))
 											/sqrt(1/n0+1/n1+1/m0+1/m1)
 									)
 								
@@ -202,7 +213,7 @@
 								lines(x.spot, apply(PenumbraModel$Samples, 2, quantile, 0.975)[1:4], type = "b", lwd = 1, lty = 2)
 								text(x = x.spot, y = rep(-5,4), best, xpd = TRUE)
 								text(x = x.spot[1], y = -5, "Pr(Best)", xpd = TRUE)
-								legend("topleft", legend = c(paste0("Pr(Best > Cntrl on Weighted MRS) = ", p),paste0("Pr(Phase III Success on Weighted MRS) = ",round(Results[Trial, 22,LookIndex],3))), bty = "n")
+								legend("topleft", legend = c(paste0("Pr(Best > Cntrl on Penumbra Change) = ", ProbBestBetterThanControlPenumbra),paste0("Pr(Phase III Success on Weighted MRS) = ",round(Results[Trial, 22,LookIndex],3))), bty = "n")
 
 								
 							}
@@ -222,3 +233,12 @@ dev.off()
 
 	#Observed allocation of subject
 	Results[1,1:4,4]
+
+	#Prob best better than control on penumbra
+	Results[, 21,4]
+
+	#Prob success on Phase III based on MRS
+	Results[, 22,4]
+
+	#Prob best better than control on MRS
+	Results[, 23,4]
