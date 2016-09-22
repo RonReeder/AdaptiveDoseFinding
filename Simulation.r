@@ -19,10 +19,10 @@
 
 	#Distribution of MRS for each dosing group.
 		MRSDistribution=matrix(,4,7)
-		MRSDistribution[1,] = c(.4,.1,.1,.1,.1,.1,.1) #Placebo
-		MRSDistribution[2,] = c(.1,.1,.4,.1,.1,.1,.1) #Dose 1
-		MRSDistribution[3,] = c(.1,.1,.1,.4,.1,.1,.1) #Dose 2
-		MRSDistribution[4,] = c(.1,.1,.1,.1,.4,.1,.1) #Dose 3
+		MRSDistribution[1,] = c(.09,.13,.09,.13,.16,.09,.31) #Placebo
+		MRSDistribution[2,] = c(.12,.16,.11,.15,.15,.12,.19) #Dose 1 
+		MRSDistribution[3,] = c(.15,.20,.10,.16,.15,.10,.14) #Dose 2
+		MRSDistribution[4,] = c(.17,.24,.15,.09,.20,.04,.11) #Dose 3
 
 	#Number of contols / actives in future phase three
 		m0=250 #controls
