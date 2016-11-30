@@ -2,41 +2,44 @@
 
 #Speficy trial characteristics and sassumed distributions.
 	#Maximum number of subjects in a trial.
-		N=150
+		N=160
 
 	#Duration of trial (not used in calculation because response is measured almost immediately)
 		DurationOfTrialMonths = 50
-
-	#Initial allocation (ranomization probabilities)	
-		Allocation = c(.25,.25,.25,.25)
 
 	#Number of simulations to run
 		Simulations = 100
 
 	#Distribution of penumbra outcomes in each arm
-		ARMMeans=c(21,9,6,3)
-		ARMStandardDeviations=c(12,15,10,8)
+		ARMMeans=c(10,8,6,4)
+		ARMStandardDeviations=c(10,8,6,4)
+		#ARMMeans=c(21,9,6,3)
+		#ARMStandardDeviations=c(12,15,10,8)
 
 	#Distribution of MRS for each dosing group.
 		MRSDistribution=matrix(,4,7)
 		MRSDistribution[1,] = c(.09,.13,.09,.13,.16,.09,.31) #Placebo
-		MRSDistribution[2,] = c(.12,.16,.11,.15,.15,.12,.19) #Dose 1 
-		MRSDistribution[3,] = c(.15,.20,.10,.16,.15,.10,.14) #Dose 2
-		MRSDistribution[4,] = c(.17,.24,.15,.09,.20,.04,.11) #Dose 3
+		MRSDistribution[2,] = c(.11,.15,.11,.15,.18,.11,.19) #Dose 1
+		MRSDistribution[3,] = c(.13,.17,.13,.17,.20,.13,.07) #Dose 2
+		MRSDistribution[4,] = c(.15,.19,.15,.19,.22,.10,.00) #Dose 3
+		#MRSDistribution[1,] = c(.09,.13,.09,.13,.16,.09,.31) #Placebo
+		#MRSDistribution[2,] = c(.12,.16,.11,.15,.15,.12,.19) #Dose 1 
+		#MRSDistribution[3,] = c(.15,.20,.10,.16,.15,.10,.14) #Dose 2
+		#MRSDistribution[4,] = c(.17,.24,.15,.09,.20,.04,.11) #Dose 3
 		#MRSDistribution[1,] = c(0,1,0,0,0,0,0) #Placebo
 		#MRSDistribution[2,] = c(0,1,0,0,0,0,0) #Dose 1 
 		#MRSDistribution[3,] = c(0,1,0,0,0,0,0) #Dose 2
 		#MRSDistribution[4,] = c(0,1,0,0,0,0,0) #Dose 3
 
 	#Number of contols / actives in future phase three
-		m0=25 #controls
-		m1=25 #actives
+		m0=150 #controls
+		m1=150 #actives
 
 	#Utility function for utility-weighted MRS.
 		UtilityWeighting = c(1,.91,.76,.65,.33, 0, 0) 
 
 	#The points at which interim evaluations are made (in terms of the number of subjects)
-	#N is include so that a 'look' is also performed at the end of the trial.
+	#N is included so that a 'look' is also performed at the end of the trial.
 		InterimLooks = c(40,80,120,N)
 
 #Set seed for generating random data so that results are reproducable.
@@ -61,7 +64,7 @@
 
 	}
 
-#	This function takes the Patient matrix (rows 1 through 'Subject'), fits a NDLR model, and estimates the probability that each active dose is the best
+#	This function takes the Patient matrix (rows 1 through 'Subject'), fits a Normal dynamic linear response (NDLR) model, and estimates the probability that each active dose is the best
 #	'Best' can mean in terms of the penumbra outcome (column = 3) or the modified MRS outcome (column = 4)
 ##### Output generated ######
 	#Samples is a matrix of data generated based on the fitted distributions.
@@ -136,6 +139,9 @@
 
 			#The allocation probabilities are updated at interim looks.  LookIndex keeps track of which look we are on.
 				LookIndex = 0
+
+			#Initial allocation (ranomization probabilities)	
+				Allocation = c(.25,.25,.25,.25)
 
 			#	Generate data for each subject.	
 				for (Subject in 1:N){
@@ -257,3 +263,13 @@ dev.off()
 
 	#Prob best better than control on MRS
 	Results[, 23,4]
+
+	#
+#do (Trial in 1:100)
+#	{
+#		do (LookIndex in 1:4)
+#			{
+#				Results[Trial, 22,LookIndex]	
+#			}		
+#	}
+	
