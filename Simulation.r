@@ -11,13 +11,11 @@
 		Allocation = c(.25,.25,.25,.25)
 
 	#Number of simulations to run
-		Simulations = 1
+		Simulations = 100
 
 	#Distribution of penumbra outcomes in each arm
-		#ARMMeans=c(21,9,6,3)
-		ARMMeans=c(10,10,10,10)
-		#ARMStandardDeviations=c(12,15,10,8)
-		ARMStandardDeviations=c(1,1,1,1)
+		ARMMeans=c(21,9,6,3)
+		ARMStandardDeviations=c(12,15,10,8)
 
 	#Distribution of MRS for each dosing group.
 		MRSDistribution=matrix(,4,7)
@@ -31,8 +29,8 @@
 		#MRSDistribution[4,] = c(0,1,0,0,0,0,0) #Dose 3
 
 	#Number of contols / actives in future phase three
-		m0=25000 #controls
-		m1=25000 #actives
+		m0=25 #controls
+		m1=25 #actives
 
 	#Utility function for utility-weighted MRS.
 		UtilityWeighting = c(1,.91,.76,.65,.33, 0, 0) 
@@ -196,12 +194,11 @@
 							# plot
 							if (Trial %in% c(1,2,3,4))
 							{
+								#MRS plot
 								best <- c(NA, PenumbraModel$Probabilities)
-
 								par(mar = c(4,4,4,4))
 								x.spot <- barplot(Subject*Results[Trial,1:4,LookIndex], ylim = c(0,70), xlim = c(0, 4.75), names = c("Cntrl", "Dose1", "Dose2", "Dose3"))
 								mtext(side = 2, "Sample Size", line = 2.5)	
-
 								par(new = TRUE)
 								plot(x.spot,  tapply(Patients[,3], factor(Patients[,2], levels = 1:4), mean), xlim = c(0, 4.75), ylim = c(0, 30), pch = 8, col = "red", 
 										bty = "n", xlab = "", ylab = "", xaxt = "n", yaxt = "n", cex = 1.5)
@@ -214,6 +211,24 @@
 								text(x = x.spot, y = rep(-5,4), best, xpd = TRUE)
 								text(x = x.spot[1], y = -5, "Pr(Best)", xpd = TRUE)
 								legend("topleft", legend = c(paste0("Pr(Best > Cntrl on Penumbra Change) = ", ProbBestBetterThanControlPenumbra),paste0("Pr(Phase III Success on Weighted MRS) = ",round(Results[Trial, 22,LookIndex],3))), bty = "n")
+
+								#Penumbra Plot
+								best <- c(NA, MRSModel$Probabilities)
+								par(mar = c(4,4,4,4))
+								x.spot <- barplot(Subject*Results[Trial,1:4,LookIndex], ylim = c(0,70), xlim = c(0, 4.75), names = c("Cntrl", "Dose1", "Dose2", "Dose3"))
+								mtext(side = 2, "Sample Size", line = 2.5)	
+								par(new = TRUE)
+								plot(x.spot,  tapply(Patients[,4], factor(Patients[,2], levels = 1:4), mean), xlim = c(0, 4.75), ylim = c(0, 1), pch = 8, col = "red", 
+										bty = "n", xlab = "", ylab = "", xaxt = "n", yaxt = "n", cex = 1.5)
+								title(main = paste0("Simulated Trial: ", Trial, "; Number Enrolled: ", Subject))		
+								axis(side = 4)	
+								mtext(side = 4, "Utility-Weighted MRS", line = 2)	
+								lines(x.spot, apply(MRSModel$Samples, 2, mean)[1:4], type = "b", lwd = 2)
+								lines(x.spot, apply(MRSModel$Samples, 2, quantile, 0.025)[1:4], type = "b", lwd = 1, lty = 2)
+								lines(x.spot, apply(MRSModel$Samples, 2, quantile, 0.975)[1:4], type = "b", lwd = 1, lty = 2)
+								text(x = x.spot, y = rep(-0.15,4), best, xpd = TRUE)
+								text(x = x.spot[1], y = -0.15, "Pr(Best)", xpd = TRUE)
+								legend("topleft", legend = c(paste0("Pr(Best > Cntrl on MRS) = ", ProbBestBetterThanControlMRS),paste0("Pr(Phase III Success on Weighted MRS) = ",round(Results[Trial, 22,LookIndex],3))), bty = "n")
 
 								
 							}
